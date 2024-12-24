@@ -1,19 +1,15 @@
 package com.viveksinghspringsecurity.config;
 
 import com.viveksinghspringsecurity.exceptionhandling.CustomAccessDeniedHandler;
-import com.viveksinghspringsecurity.exceptionhandling.CustomBasicAuthenticationEntryPoint;
-import com.viveksinghspringsecurity.filter.*;
+import com.viveksinghspringsecurity.filter.CsrfCookieFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.crypto.factory.PasswordEncoderFactories;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
@@ -23,22 +19,19 @@ import org.springframework.web.cors.CorsConfigurationSource;
 
 import java.util.Arrays;
 import java.util.Collections;
-import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
+@EnableWebSecurity
 @Profile("!prod")
 public class ProjectSecurityConfig {
+
     @Bean
     SecurityFilterChain defaultSecurityFilterChain(
             HttpSecurity http) throws Exception {
-/*
-        http.authorizeHttpRequests((requests) -> requests.anyRequest().authenticated());
-        http.authorizeHttpRequests((requests) -> requests.anyRequest().permitAll());
-        http.authorizeHttpRequests((requests) -> requests.anyRequest().denyAll());
-*/
         CsrfTokenRequestAttributeHandler csrfTokenRequestAttributeHandler = new CsrfTokenRequestAttributeHandler();
+        JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
+        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(new KeycloakRoleConverter());
 
-        //  http.securityContext(contextConfig -> contextConfig.requireExplicitSave(false));
 
         http.sessionManagement(sessionConfig -> sessionConfig.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         http.cors(corsConfig -> corsConfig.configurationSource(new CorsConfigurationSource() {
@@ -56,68 +49,36 @@ public class ProjectSecurityConfig {
             }
         }));
 
-        http.csrf(csrfConfig -> csrfConfig
+        http.csrf((csrfConfig) -> csrfConfig
                         .csrfTokenRequestHandler(csrfTokenRequestAttributeHandler)
-                        .ignoringRequestMatchers("/contact", "/register", "/apiLogin")
+                        .ignoringRequestMatchers("/contact", "/register")
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
-                .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
-                .addFilterBefore(new RequestValidationBeforeFilter(), BasicAuthenticationFilter.class)
-                .addFilterAfter(new AuthoritiesLoggingAfterFilter(), BasicAuthenticationFilter.class)
-                .addFilterAt(new AuthoritiesloggingAtFilter(), BasicAuthenticationFilter.class)
-                .addFilterAfter(new JWTTokenGeneratorFilter(), BasicAuthenticationFilter.class)
-                .addFilterBefore(new JWTTokenValidatorFilter(), BasicAuthenticationFilter.class);
+                .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class);
 
         //http.sessionManagement(smc -> smc.invalidSessionUrl("/invalidSession").maximumSessions(3).maxSessionsPreventsLogin(true));
-        //          http.csrf((csrfConfig)-> csrfConfig.disable());
+        //                  http.csrf((csrfConfig)-> csrfConfig.disable());
+
 
         http.requiresChannel(rcc -> rcc.anyRequest()
                 .requiresInsecure());
 
         http.authorizeHttpRequests((requests) -> requests
-                //                .requestMatchers("/myAccount").hasAuthority("VIEWACCOUNT")
-                //                .requestMatchers( "/myBalance").hasAnyAuthority("VIEWBALANCE","VIEWACCOUNT")
-                //                .requestMatchers( "/myCards").hasAuthority("VIEWCARDS")
-                //                .requestMatchers( "/myLoans").hasAuthority("VIEWLOANS")
-
                 .requestMatchers("/myAccount").hasRole("USER")
                 .requestMatchers("/myBalance")
                 .hasAnyRole("USER", "ADMIN")
                 .requestMatchers("/myCards").hasRole("ADMIN")
                 .requestMatchers("/myLoans").authenticated()
                 .requestMatchers("/user").authenticated()
-                .requestMatchers("/contact", "/notices", "/error", "/register", "/invalidSession", "/apiLogin")
+                .requestMatchers("/contact", "/notices", "/error", "/register")
                 .permitAll());
 
-        http.authorizeHttpRequests((requests) -> requests.anyRequest()
-                .denyAll());
-        http.formLogin(withDefaults());
-        http.httpBasic(hbc -> hbc.authenticationEntryPoint(new CustomBasicAuthenticationEntryPoint()));
+        http.oauth2ResourceServer(rsc -> rsc.jwt(jwtConfigurer -> jwtConfigurer.jwtAuthenticationConverter(jwtAuthenticationConverter)));
+
         http.exceptionHandling(ehc -> ehc.accessDeniedHandler(new CustomAccessDeniedHandler()));
 
-        //        http.formLogin(flc-> flc.disable());
-        //        http.httpBasic(hbc->hbc.disable());
         return http.build();
     }
 
-    //    @Bean
-    //    public UserDetailsService userDetailsService(DataSource dataSource) {
-    //        return new JdbcUserDetailsManager(dataSource);
-    //    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(
-            UserDetailsService userDetailsService,
-            PasswordEncoder passwordEncoder) {
-        BankUsernamePwdAuthenticationProvider authenticationProvider = new BankUsernamePwdAuthenticationProvider(userDetailsService, passwordEncoder);
-        ProviderManager providerManager = new ProviderManager(authenticationProvider);
-        providerManager.setEraseCredentialsAfterAuthentication(false);
-        return providerManager;
-    }
 }
 
 

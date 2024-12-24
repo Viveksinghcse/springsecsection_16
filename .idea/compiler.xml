@@ -7,11 +7,13 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="springsecsection8" />
         <module name="springsecsection9" />
         <module name="springsecsection12" />
         <module name="springsecsection11" />
         <module name="springsecsection10" />
-        <module name="springsecsection8" />
+        <module name="springsecsection16" />
+        <module name="springsecsection15" />
       </profile>
     </annotationProcessing>
   </component>
@@ -20,6 +22,8 @@
       <module name="springsecsection10" options="-parameters" />
       <module name="springsecsection11" options="-parameters" />
       <module name="springsecsection12" options="-parameters" />
+      <module name="springsecsection15" options="-parameters" />
+      <module name="springsecsection16" options="-parameters" />
       <module name="springsecsection8" options="-parameters" />
       <module name="springsecsection9" options="-parameters" />
     </option>

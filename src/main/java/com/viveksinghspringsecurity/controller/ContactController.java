@@ -2,6 +2,7 @@ package com.viveksinghspringsecurity.controller;
 
 import com.viveksinghspringsecurity.model.Contact;
 import com.viveksinghspringsecurity.repository.ContactRepository;
+import org.springframework.security.access.prepost.PostFilter;
 import org.springframework.security.access.prepost.PreFilter;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -9,6 +10,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.sql.Date;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -21,18 +24,18 @@ public class ContactController {
     }
 
     @PostMapping("/contact")
-   @PreFilter("filterObject.contactName != 'Test'")
-    public Contact saveContactInquiryDetails(@RequestBody List<Contact> contacts) {
-        Contact contact = contacts.getFirst();
-        if (null != contact){
+//   @PreFilter("filterObject.contactName != 'Test'")
+    @PostFilter("filterObject.contactName != 'Test'")
+    public List <Contact> saveContactInquiryDetails(@RequestBody List<Contact> contacts) {
+           List<Contact> returnContact = new ArrayList<>();
+        if (!contacts.isEmpty()){
+            Contact contact = contacts.getFirst();
             contact.setContactId(getServiceReqNumber());
             contact.setCreateDt(new Date(System.currentTimeMillis()));
-            return contactRepository.save(contact);
-        } else {
-
-            return null;
+            Contact savedContact = contactRepository.save(contact);
+            returnContact.add(savedContact);
         }
-
+return  returnContact;
     }
 
     public String getServiceReqNumber() {
